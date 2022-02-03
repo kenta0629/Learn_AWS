@@ -1,0 +1,120 @@
+
+/* variableで変数定義 */
+variable "example_instance_type" {
+    default = "t3.micro"
+}
+
+resource "aws_instance" "example" {
+    ami = "ami-0c3fd0f5d33134a76"
+    instance_type = var.example_instance_type
+
+    /*
+    user_data = <<EOF
+        #!/bin/bash
+        yum install -y httpd
+        systemctl start httpd.service
+    EOF
+    */
+}
+
+/* ############################################## */
+/* localsでローカル変数定義 */
+locals {
+    example_instance_type = "t3.micro"
+}
+
+resource "aws_instance" "example" {
+    ami = "ami-0c3fd0f5d33134a76"
+    instance_type = local.example_instance_type
+}
+
+/* ############################################## */
+/* outputで出力値定義 */
+resource "aws_instance" "example" {
+    ami = "ami-0c3fd0f5d33134a76"
+    instance_type = "t3.micro"
+}
+
+output "example_instance_id" {
+    value = aws_instance.example.id
+}
+
+/* ############################################## */
+/* 外部データの参照 */
+data "aws_ami" "recent_amazon_linux_2" {
+    /* 最新のAMIを取得 */
+    most_recent = true
+    owners = ["amazon"]
+
+    /* 検索条件 */
+    filter {
+        name = "name"
+        values = ["amazn2-ami-hvm-2.0.????????-x86_64-gp2"]
+    }
+
+    /* 検索条件 */
+    filter {
+        name = "state"
+        values = ["available"]
+    }
+}
+
+resource "aws_instance" "example" {
+    ami = data.aws_ami.recent_amazon_linux_2.image_id
+    instance_type = "t3.micro"
+}
+
+/* ############################################## */
+/* プロバイダ（GCPやAzureなどのAPIの違いを吸収する役割）を明示的に記述する方法 */
+/* プロバイダはTerraform本体とは分離されているため、terraform initでバイナリファイルをダウンロードする必要あり */
+provider "aws" {
+    region = "ap-northeast-1"
+}
+
+/* ############################################## */
+/* セキュリティグループへの参照 */
+/* セキュリティグループ参照設定 */
+resource "aws_security_group" "example_ec2" {
+    name = "example-ec2"
+
+    /* []はリスト形式 */
+    ingress {
+        from_port = 80
+        to_port = 80
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = -1
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
+resource "aws_instance" "example" {
+    ami = "ami-0c3fd0f5d33134a76"
+    instance_type = "t3.micro"
+    vpc_security_group_ids = [aws_security_group.example_ec2.id]
+
+    user_data = <<EOF
+        #!/bin/bash
+        yum install -y httpd
+        systemctl start httpd.service
+    EOF
+}
+
+/* 「TYPE.NAME.ATTRIBUTE」の形式で書くことで他のリソースを参照できる */
+output "example_public_dns" {
+    value = aws_instance.example.public_dns
+}
+
+/* ############################################## */
+/* 組み込み関数 */
+/* user_data.shを読み込み */
+resource "aws_instance" "example" {
+    ami = "ami-0c3fd0f5d33134a76"
+    instance_type = "t3.micro"
+    user_data = file("./user_data.sh")
+}
