@@ -7,7 +7,7 @@ resource "aws_s3_bucket" "private" {
     server_side_encryption_configuration { /* 暗号化を有効にする、オブジェクト保存時に暗号化 */
         rule {
             apply_server_side_encryption_by_default {
-                sse_algotithm = "AES256"
+                sse_algorithm = "AES256"
             }
         }
     }
@@ -49,7 +49,7 @@ resource "aws_s3_bucket" "alb_log" { /* ALB用のログ定義 */
 /* バケットポリシーの定義 */
 /* ALBなどのAWSサービスからS3に書き込みする際に必要なアクセス権限 */
 resource "aws_s3_bucket_policy" "alb_log" {
-    bucket = aws_s3_bucket.alb_log.json
+    bucket = aws_s3_bucket.alb_log.id
     policy = data.aws_iam_policy_document.alb_log.json
 }
 
